@@ -7,32 +7,38 @@ Created on Thu Oct 24 10:17:40 2019
 
 import scipy.io
 import numpy as np
+import pickle
 
-data_folder = './data/'
-raw_files = {
-        'train' : {
-                'cycle1' : '03-18-17_02.17 25degC_Cycle_1_Pan18650PF.mat',
-                'cycle2' : '03-19-17_03.25 25degC_Cycle_2_Pan18650PF.mat',
-                'cycle3' : '03-19-17_09.07 25degC_Cycle_3_Pan18650PF.mat',
-                'cycle4' : '03-19-17_14.31 25degC_Cycle_4_Pan18650PF.mat',
-                'udds' : '03-21-17_00.29 25degC_UDDS_Pan18650PF.mat',
-                'la92' : '03-21-17_09.38 25degC_LA92_Pan18650PF.mat',
-                'nn' : '03-21-17_16.27 25degC_NN_Pan18650PF.mat'
-                },
-        
-        'test' : {
-                'us06' : '03-20-17_01.43 25degC_US06_Pan18650PF.mat',
-                'hwfta' : '03-20-17_05.56 25degC_HWFTa_Pan18650PF.mat',
-                'hwftb' : '03-20-17_19.27 25degC_HWFTb_Pan18650PF.mat'
-                },
-#        'valid': {
-#                'cycle3' : '03-19-17_09.07 25degC_Cycle_3_Pan18650PF.mat',
-#                'la92' : '03-21-17_09.38 25degC_LA92_Pan18650PF.mat'
-#                }
-        }
+
+###############################################################################
+
+###############################################################################
 
 class DataLoader():
     def __init__(self,):
+        self.data_folder = './data/'
+        self.pkl_file = './soc_db.pkl'
+        self.raw_files = {
+                'train' : {
+                        'cycle1' : '03-18-17_02.17 25degC_Cycle_1_Pan18650PF.mat',
+                        'cycle2' : '03-19-17_03.25 25degC_Cycle_2_Pan18650PF.mat',
+                        'cycle3' : '03-19-17_09.07 25degC_Cycle_3_Pan18650PF.mat',
+                        'cycle4' : '03-19-17_14.31 25degC_Cycle_4_Pan18650PF.mat',
+                        'udds' : '03-21-17_00.29 25degC_UDDS_Pan18650PF.mat',
+                        'la92' : '03-21-17_09.38 25degC_LA92_Pan18650PF.mat',
+                        'nn' : '03-21-17_16.27 25degC_NN_Pan18650PF.mat'
+                        },
+                
+                'test' : {
+                        'us06' : '03-20-17_01.43 25degC_US06_Pan18650PF.mat',
+                        'hwfta' : '03-20-17_05.56 25degC_HWFTa_Pan18650PF.mat',
+                        'hwftb' : '03-20-17_19.27 25degC_HWFTb_Pan18650PF.mat'
+                        },
+        #        'valid': {
+        #                'cycle3' : '03-19-17_09.07 25degC_Cycle_3_Pan18650PF.mat',
+        #                'la92' : '03-21-17_09.38 25degC_LA92_Pan18650PF.mat'
+        #                }
+                }
         pass
         
     def process(self,mat_file):
@@ -52,8 +58,8 @@ class DataLoader():
         ai = []
         average_factor = 400
         vlen = len(data['v'])
-        for k in range(vlen):
-            
+        
+        for k in range(vlen+1):    
             if k-average_factor>=0:
                 ai.append((sum(data['i'][k-average_factor:k]))/average_factor)
                 av.append((sum(data['v'][k-average_factor:k]))/average_factor)
@@ -65,15 +71,19 @@ class DataLoader():
         data['av'] = np.array(av)
         return data
 
+    def CreateDB(self,):
+        soc_db = {}
+        for key in self.raw_files.keys():
+            soc_db[key] = {}
+            for dataset in self.raw_files[key].keys():
+                mat_file = '{}{}'.format(self.data_folder,self.raw_files[key][dataset])
+                soc_db[key][dataset] = self.process(mat_file)
+                        
+        with open(self.pkl_file, 'wb+') as fp:
+            pickle.dump(soc_db,fp,protocol=pickle.HIGHEST_PROTOCOL)
+        
+
+###############################################################################
 
 data_processor = DataLoader()
-soc_db = {}
-for key in raw_files.keys():
-    soc_db[key] = {}
-    for dataset in raw_files[key].keys():
-        mat_file = '{}{}'.format(data_folder,raw_files[key][dataset])
-        soc_db[key][dataset] = data_processor.process(mat_file)
-        
-        
-        
-#mat = scipy.io.loadmat('./DATA/03-20-17_01.43 25degC_US06_Pan18650PF.mat')['meas'][0][0]
+data_processor.CreateDB()
