@@ -8,16 +8,18 @@ Created on Thu Oct 24 10:17:40 2019
 import scipy.io
 import numpy as np
 import pickle
+from torch.utils.data import Dataset
+import os
 
-
+pkl_file = './soc_db.pkl'
 ###############################################################################
 
 ###############################################################################
 
-class DataLoader():
+class SOCLoader():
     def __init__(self,):
         self.data_folder = './data/'
-        self.pkl_file = './soc_db.pkl'
+        self.pkl_file = pkl_file
         self.raw_files = {
                 'train' : {
                         'cycle1' : '03-18-17_02.17 25degC_Cycle_1_Pan18650PF.mat',
@@ -39,7 +41,6 @@ class DataLoader():
         #                'la92' : '03-21-17_09.38 25degC_LA92_Pan18650PF.mat'
         #                }
                 }
-        pass
         
     def process(self,mat_file):
         data={}
@@ -48,11 +49,11 @@ class DataLoader():
         data['i'] = mat[2]
         ah = mat[3]
         data['temp'] = mat[6]
-#        tstamp = mat[0]
-#        time = mat[7]
-#        ctemp = mat[8]
-#        wh = mat[4]
-#        power = mat[5]
+        # tstamp = mat[0]
+        # time = mat[7]
+        # ctemp = mat[8]
+        # wh = mat[4]
+        # power = mat[5]
         data['soc'] = (4.2+ah)*100/4.2
         av = []
         ai = []
@@ -84,6 +85,50 @@ class DataLoader():
         
 
 ###############################################################################
+def PickleDB():
+    data_processor = SOCLoader()
+    data_processor.CreateDB()
 
-data_processor = DataLoader()
-data_processor.CreateDB()
+
+
+
+
+class SOCDataset(Dataset):
+    def __init__(self, soc_db):
+        self.soc_db = soc_db
+        self.samples = []
+        self._init_dataset()
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        race, gender, name = self.samples[idx]
+        return self.one_hot_sample(race, gender, name)
+
+    def _init_dataset(self):
+        races = set()
+        genders = set()
+
+        for race in os.listdir(self.soc_db):
+            race_folder = os.path.join(self.soc_db, race)
+            races.add(race)
+
+            for gender in os.listdir(race_folder):
+                gender_filepath = os.path.join(race_folder, gender)
+                genders.add(gender)
+
+                with open(gender_filepath, 'r') as gender_file:
+                    for name in gender_file.read().splitlines():
+                        self.samples.append((race, gender, name))
+
+
+if __name__ == "__main__":    
+    #    PickleDB()    
+    with open(pkl_file, 'rb') as fp:
+        soc_db = pickle.load(fp)
+
+    traindataset,testdataset = SOCDataset(soc_db)
+#    print(len(dataset))
+#    print(dataset[100])
+#    print(dataset[122:361])
