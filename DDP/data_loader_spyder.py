@@ -8,7 +8,7 @@ Created on Thu Oct 24 10:17:40 2019
 import scipy.io
 import numpy as np
 import pickle
-from torch.utils.data import Dataset
+#from torch.utils.data import Dataset
 import os
 
 pkl_file = './soc_db.pkl'
@@ -93,7 +93,8 @@ def PickleDB():
 
 
 
-class SOCDataset(Dataset):
+#class SOCDataset(Dataset):
+class SOCDataset():
     def __init__(self, soc_db):
         self.soc_db = soc_db
         self.samples = []
@@ -103,32 +104,24 @@ class SOCDataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        race, gender, name = self.samples[idx]
-        return self.one_hot_sample(race, gender, name)
-
+        return self.samples[idx]
+        
     def _init_dataset(self):
-        races = set()
-        genders = set()
-
-        for race in os.listdir(self.soc_db):
-            race_folder = os.path.join(self.soc_db, race)
-            races.add(race)
-
-            for gender in os.listdir(race_folder):
-                gender_filepath = os.path.join(race_folder, gender)
-                genders.add(gender)
-
-                with open(gender_filepath, 'r') as gender_file:
-                    for name in gender_file.read().splitlines():
-                        self.samples.append((race, gender, name))
+        for key in self.soc_db.keys():
+            subset = self.soc_db[key]
+            for i in range(len(subset["v"])):
+                self.samples.append(((subset["v"][i],subset["temp"][i],subset["av"][i],subset["ai"][i]),subset["soc"][i]))
 
 
-if __name__ == "__main__":    
+def GetSOCdata():    
     #    PickleDB()    
     with open(pkl_file, 'rb') as fp:
-        soc_db = pickle.load(fp)
+        soc_db_all = pickle.load(fp)
 
-    traindataset,testdataset = SOCDataset(soc_db)
+    train_dataset = SOCDataset(soc_db_all["train"])
+    test_dataset = SOCDataset(soc_db_all["test"])
+    
 #    print(len(dataset))
 #    print(dataset[100])
 #    print(dataset[122:361])
+    return train_dataset,test_dataset

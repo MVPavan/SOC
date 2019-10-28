@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
+import data_loader_spyder
 
 
 # Device configuration
@@ -12,18 +13,11 @@ input_size = 4
 hidden_size = 4
 num_classes = 1
 num_epochs = 5000
-batch_size = 5000
+batch_size = 1000
 learning_rate = 0.0001
 
 # MNIST dataset 
-train_dataset = torchvision.datasets.MNIST(root='../../data', 
-                                           train=True, 
-                                           transform=transforms.ToTensor(),  
-                                           download=True)
-
-test_dataset = torchvision.datasets.MNIST(root='../../data', 
-                                          train=False, 
-                                          transform=transforms.ToTensor())
+train_dataset,test_dataset = data_loader_spyder.GetSOCdata()
 
 # Data loader
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
@@ -51,20 +45,29 @@ class NeuralNet(nn.Module):
 model = NeuralNet(input_size, hidden_size, num_classes).to(device)
 
 # Loss and optimizer
-criterion = nn.CrossEntropyLoss()
+class SOC_Loss():
+    def __init__(self,):
+        pass
+
+    def criterion(self,soc_est,soc_gt):
+        max_sqer = max(soc_est-soc_gt)**2
+        return max_sqer+nn.MSELoss()(soc_est,soc_gt)
+
+    
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)  
 
 # Train the model
 total_step = len(train_loader)
+soc_loss = SOC_Loss()
 for epoch in range(num_epochs):
-    for i, (images, labels) in enumerate(train_loader):  
+    for i, (inputs, soc_gt) in enumerate(train_loader):  
         # Move tensors to the configured device
-        images = images.reshape(-1, 28*28).to(device)
-        labels = labels.to(device)
+        inputs = inputs.to(device)
+        soc_gt = soc_gt.to(device)
         
         # Forward pass
-        outputs = model(images)
-        loss = criterion(outputs, labels)
+        outputs = model(inputs)
+        loss = soc_loss.criterion(outputs, soc_gt)
         
         # Backward and optimize
         optimizer.zero_grad()
@@ -80,13 +83,13 @@ for epoch in range(num_epochs):
 with torch.no_grad():
     correct = 0
     total = 0
-    for images, labels in test_loader:
-        images = images.reshape(-1, 28*28).to(device)
-        labels = labels.to(device)
-        outputs = model(images)
+    for inputs, soc_gt in test_loader:
+        inputs = inputs.reshape(-1, 28*28).to(device)
+        soc_gt = soc_gt.to(device)
+        outputs = model(inputs)
         _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+        total += soc_gt.size(0)
+        correct += (predicted == soc_gt).sum().item()
 
     print('Accuracy of the network on the 10000 test images: {} %'.format(100 * correct / total))
 
