@@ -11,14 +11,14 @@ import pickle
 #from torch.utils.data import Dataset
 import os
 
-pkl_file = './soc_db.pkl'
+pkl_file = './soc_db_v2.pkl'
 ###############################################################################
 
 ###############################################################################
 
 class SOCLoader():
     def __init__(self,):
-        self.data_folder = './data/'
+        self.data_folder = './DATA/'
         self.pkl_file = pkl_file
         self.raw_files = {
                 'train' : {
@@ -54,7 +54,7 @@ class SOCLoader():
         # ctemp = mat[8]
         # wh = mat[4]
         # power = mat[5]
-        data['soc'] = (4.2+ah)*100/4.2
+        data['soc'] = (4.2+ah)/4.2
         av = []
         ai = []
         average_factor = 400
@@ -79,6 +79,7 @@ class SOCLoader():
             for dataset in self.raw_files[key].keys():
                 mat_file = '{}{}'.format(self.data_folder,self.raw_files[key][dataset])
                 soc_db[key][dataset] = self.process(mat_file)
+            print("Processing complete from dataset: {}".format(dataset))
                         
         with open(self.pkl_file, 'wb+') as fp:
             pickle.dump(soc_db,fp,protocol=pickle.HIGHEST_PROTOCOL)
@@ -88,10 +89,6 @@ class SOCLoader():
 def PickleDB():
     data_processor = SOCLoader()
     data_processor.CreateDB()
-
-
-
-
 
 #class SOCDataset(Dataset):
 class SOCDataset():
@@ -118,11 +115,13 @@ class SOCDataset():
         for key in self.soc_db.keys():
             subset = self.soc_db[key]
             for i in range(len(subset["v"])):
-                self.samples.append(((subset["v"][i],subset["temp"][i],subset["av"][i],subset["ai"][i]),subset["soc"][i]))
+                self.samples.append((np.array([subset["v"][i][0],subset["temp"][i][0],subset["av"][i][0],subset["ai"][i][0]]),subset["soc"][i][0]))
+            print("Loading complete from dataset: {}".format(key))
 
-
-def GetSOCdata(batch_len = 1000):    
-    #    PickleDB()    
+def GetSOCdata(batch_len = 1000,pkl = False):    
+    if pkl:
+        print("Calculating Average Current, Voltage and SOC .... ")
+        PickleDB()    
     with open(pkl_file, 'rb') as fp:
         soc_db_all = pickle.load(fp)
 
@@ -134,4 +133,6 @@ def GetSOCdata(batch_len = 1000):
 #    print(dataset[122:361])
     return train_dataset,test_dataset
 
-trd,tsd = GetSOCdata(batch_len = 1)
+#trd,tsd = GetSOCdata(batch_len = 1)
+#for i, (inputs, soc_gt) in enumerate(trd):
+#    print(i, (type(inputs),inputs, soc_gt))
