@@ -95,16 +95,24 @@ def PickleDB():
 
 #class SOCDataset(Dataset):
 class SOCDataset():
-    def __init__(self, soc_db):
+    def __init__(self, soc_db,batch_len):
         self.soc_db = soc_db
         self.samples = []
         self._init_dataset()
+        if batch_len > 1:
+            self.length_check(batch_len)
 
     def __len__(self):
         return len(self.samples)
 
     def __getitem__(self, idx):
         return self.samples[idx]
+    
+    def length_check(self,batch_len):
+        redn = len(self.samples)%batch_len
+        if redn >= 1:
+            del self.samples[-redn:]
+        
         
     def _init_dataset(self):
         for key in self.soc_db.keys():
@@ -113,15 +121,17 @@ class SOCDataset():
                 self.samples.append(((subset["v"][i],subset["temp"][i],subset["av"][i],subset["ai"][i]),subset["soc"][i]))
 
 
-def GetSOCdata():    
+def GetSOCdata(batch_len = 1000):    
     #    PickleDB()    
     with open(pkl_file, 'rb') as fp:
         soc_db_all = pickle.load(fp)
 
-    train_dataset = SOCDataset(soc_db_all["train"])
-    test_dataset = SOCDataset(soc_db_all["test"])
+    train_dataset = SOCDataset(soc_db_all["train"],batch_len)
+    test_dataset = SOCDataset(soc_db_all["test"],batch_len)
     
 #    print(len(dataset))
 #    print(dataset[100])
 #    print(dataset[122:361])
     return train_dataset,test_dataset
+
+trd,tsd = GetSOCdata(batch_len = 1)

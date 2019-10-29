@@ -8,24 +8,38 @@ import data_loader_spyder
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+
+
+
+if torch.cuda.is_available() :
+    CUDA_VISIBLE_DEVICES=3
+    device = torch.device('cuda:3')
+else:
+    torch.device('cpu')
+
+
+torch.cuda.current_device()
 # Hyper-parameters 
 input_size = 4
 hidden_size = 4
 num_classes = 1
 num_epochs = 5000
-batch_size = 1000
+batch_len = 1000
 learning_rate = 0.0001
 
 # MNIST dataset 
-train_dataset,test_dataset = data_loader_spyder.GetSOCdata()
+train_dataset,test_dataset = data_loader_spyder.GetSOCdata(batch_len = 1000)
 
 # Data loader
+train_batch_size = len(train_dataset)/batch_len
+test_batch_size = len(test_dataset)/batch_len
+
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
-                                           batch_size=batch_size, 
+                                           batch_size=train_batch_size, 
                                            shuffle=True)
 
 test_loader = torch.utils.data.DataLoader(dataset=test_dataset, 
-                                          batch_size=batch_size, 
+                                          batch_size=test_batch_size, 
                                           shuffle=False)
 
 # Fully connected neural network with one hidden layer
@@ -50,7 +64,7 @@ class SOC_Loss():
         pass
 
     def criterion(self,soc_est,soc_gt):
-        max_sqer = max(soc_est-soc_gt)**2
+        max_sqer = (max(soc_est-soc_gt))**2
         return max_sqer+nn.MSELoss()(soc_est,soc_gt)
 
     
