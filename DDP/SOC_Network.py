@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
-import torchvision
-import torchvision.transforms as transforms
-import data_loader_spyder
+import SOC_Data
 import random
 import pickle
 import Pytorch_Utils
@@ -64,7 +62,7 @@ class ModelClass():
         self.test_batch_size = 1000
 
     def DataProcess(self,):
-        train_dataset,test_dataset = data_loader_spyder.GetSOCdata(self.batch_len , pkl = False)
+        train_dataset,test_dataset = SOC_Data.GetSOCdata(self.batch_len , pkl = False)
         self.train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
                                                 batch_size=self.test_batch_size, 
                                                 shuffle=True)
@@ -78,7 +76,7 @@ class ModelClass():
                                     betas=(0.9, 0.999), eps=1e-08, weight_decay=0.05, amsgrad=False)
         self.soc_loss = SOC_Loss()
 
-    def trainer(self,):
+    def Trainer(self,):
         total_step = len(self.train_loader)
         total_loss = 0
         for epoch in range(self.num_epochs):
@@ -123,9 +121,12 @@ class ModelClass():
                 predicted = torch.max(outputs.data, 1)
                 total_test_error = abs(torch.mean(predicted-soc_gt).item())+total_test_error
             self.myUtils.writer("Average Error",total_test_error/sample_length,epoch)
-        print('Average error of the network till epoch: {} is {}%'.format(epoch,total_test_error/sample_length))
+        print('Average error of the network for {} epochs is: {}'.format(epoch,total_test_error/sample_length))
 
 
 if __name__ == "__main__":
 
-    self = ModelClass()
+    Model = ModelClass()
+    Model.Trainer()
+    Model.Tester(Model.num_epochs)
+    
