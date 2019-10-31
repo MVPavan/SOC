@@ -2,3 +2,6 @@
 *.ckpt
 *.pkl
 *out*
+*ipynb*
+*__pycache__*
+*.vscode*
