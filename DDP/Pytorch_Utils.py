@@ -5,7 +5,8 @@ from torch.utils.tensorboard import SummaryWriter
 class MyUtils():
     def __init__(self,save_path_dir="./outputs"):
         self.save_path_dir=save_path_dir
-        self.writer = SummaryWriter(os.path.join(save_path_dir,"Logs"))
+        self.writer = SummaryWriter(os.path.join(save_path_dir,"logs"))
+        # self.writer = SummaryWriter()
 
     def checkpoint_saver(self,model,optimizer,epoch,batch,loss,save_name=""):
         if len(save_name)==0:

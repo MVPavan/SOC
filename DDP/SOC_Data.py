@@ -11,7 +11,7 @@ import pickle
 #from torch.utils.data import Dataset
 import os
 
-pkl_file = './soc_db_v2.pkl'
+pkl_file = './DATA/soc_db_v2.pkl'
 ###############################################################################
 
 ###############################################################################

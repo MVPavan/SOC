@@ -8,17 +8,21 @@ import Pytorch_Utils
 
 class SOC_Loss():
     def __init__(self,):
-        self.scale = 100
+        self.scale1 = 0
+        self.scale2 = 0
+        self.scale3 = 100
+        self.mse_loss = nn.MSELoss()
 
     def criterion(self,soc_est,soc_gt):
-        err = soc_est-soc_gt
-        err = torch.max(err)
-        print(torch.max(err))
-        # max_sqer = err**2
-        max_abe = abs(err)
-        mae_err = nn.L1Loss()(soc_est,soc_gt)        
-        mse_err = nn.MSELoss()(soc_est,soc_gt)
-        closs = 0*max_abe+0*mae_err+self.scale*mse_err
+        # err = soc_est-soc_gt
+        # err = torch.max(err)
+        # # print(torch.max(err))
+        # # max_sqer = err**2
+        # max_abe = abs(err)
+        # mae_err = nn.L1Loss()(soc_est,soc_gt)        
+        mse_err = self.mse_loss(soc_est,soc_gt)
+        # closs = self.scale1*max_abe+self.scale2*mae_err+self.scale3*mse_err
+        closs = self.scale3*mse_err
         # print(max_abe.item(),mae_err.item())
         # print(mae_err.item(),max_sqer.item(),mse_err.item())
         return closs
@@ -34,8 +38,6 @@ class NeuralNet(nn.Module):
         out = self.fc1(x)
         out = self.relu(out)
         out = self.fc2(out)
-        # out = torch.clamp(out, min=0, max=1)
-        # out = self.relu(out)
         return out
 
 class ModelClass():
@@ -45,17 +47,17 @@ class ModelClass():
         if torch.cuda.is_available() :
         #     CUDA_VISIBLE_DEVICES=4
             self.device = torch.device('cuda:4')
+            print("GPU Available !!!")
         else:
             self.device = torch.device('cpu')
         # torch.cuda.current_device()
         self.HyperParams()
         self.DataProcess()
+        self.ModelInit()
 
     def HyperParams(self,):# Hyper-parameters 
-        self.input_size = 4
-        self.hidden_size = 8
-        self.num_classes = 1
-        self.num_epochs = 1
+        [self.input_size, self.hidden_size, self.num_classes] = [4, 8, 1]
+        self.num_epochs = 20
         self.batch_len = 1
         self.learning_rate = 0.0001
         self.train_batch_size = self.batch_len
@@ -64,7 +66,7 @@ class ModelClass():
     def DataProcess(self,):
         train_dataset,test_dataset = SOC_Data.GetSOCdata(self.batch_len , pkl = False)
         self.train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
-                                                batch_size=self.test_batch_size, 
+                                                batch_size=self.train_batch_size, 
                                                 shuffle=True)
         self.test_loader = torch.utils.data.DataLoader(dataset=test_dataset, 
                                                 batch_size=self.test_batch_size, 
@@ -76,17 +78,18 @@ class ModelClass():
                                     betas=(0.9, 0.999), eps=1e-08, weight_decay=0.05, amsgrad=False)
         self.soc_loss = SOC_Loss()
 
+    # def ModelLoad(self,model_path)
     def Trainer(self,):
         total_step = len(self.train_loader)
-        total_loss = 0
         for epoch in range(self.num_epochs):
-            epoch_loss = 0
+            batch_loss = 0
+            batch_loss_update = 0
             if epoch > 5:
-                self.soc_loss.scale = self.soc_loss.scale*10
+                [self.soc_loss.scale1,self.soc_loss.scale2,self.soc_loss.scale3] = [self.soc_loss.scale1*10,self.soc_loss.scale2*10,self.soc_loss.scale3*10]
 
             for i, (inputs, soc_gt) in enumerate(self.train_loader):
-                if i>0:
-                    break
+                # if i>10000:
+                #     break
                 inputs = inputs.float().to(self.device)
                 soc_gt = soc_gt.float().to(self.device)
                 outputs = self.model(inputs)
@@ -94,34 +97,41 @@ class ModelClass():
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-                epoch_loss = epoch_loss + loss.item()
-                total_loss = total_loss + loss.item()
-                if (i+1) % 100 == 0:
+                batch_loss = batch_loss + loss.item()
+                if (i+1) % 300 == 0:
+                    batch_loss_update = batch_loss/300
+                    batch_loss = 0
                     if self.batch_len>1:
                         k=random.randint(1,self.batch_len-1)
                     else:
                         k = 0
                     print(k,outputs.data[k][0],soc_gt.data[k])
-                    print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch+1, self.num_epochs, i+1, total_step, loss.item()))
-                    self.myUtils.writer("ModelLoss",{ 'EpochAvgLoss': epoch_loss/(i+1),
-                                                        'TotalAvgLoss': total_loss/(epoch*self.batch_len+i+1)},(epoch*self.batch_len+i+1))
+                    print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Batch_Loss : {:.4f}'.format(epoch+1, self.num_epochs, i+1, total_step, loss.item(),batch_loss_update))
+                    k1 = epoch*self.batch_len+i+1
+                    self.myUtils.writer.add_scalars("ModelLoss",{'Loss': loss.item()*100,
+                                                                 'BatchAvgLoss': batch_loss_update*100,
+                                                                },k1)
             
-            self.myUtils.checkpoint_saver(self.model,self.optimizer,epoch,self.batch_len,total_loss/(epoch*self.batch_len),"SOC_481_NN")
+            self.myUtils.checkpoint_saver(self.model,self.optimizer,epoch,self.batch_len,batch_loss_update,"SOC_481_NN")
             self.Tester(epoch)
-        self.myUtils.model_state_dict_saver(self.model,"SOC_481",self.num_epochs)
+        self.myUtils.model_state_dict_saver(self.model,self.num_epochs,"SOC_481")
 
     def Tester(self,epoch=1):
         with torch.no_grad():
             total_test_error = 0
-            sample_length = len(self.test_loader)/self.test_batch_size
-            for i, (inputs, soc_gt) in enumerate(self.train_loader):
+            sample_length = len(self.test_loader)
+            for i, (inputs, soc_gt) in enumerate(self.test_loader):
+                # if i>0:
+                #     break
                 inputs = inputs.float().to(self.device)
                 soc_gt = soc_gt.float().to(self.device)
                 outputs = self.model(inputs)
-                predicted = torch.max(outputs.data, 1)
-                total_test_error = abs(torch.mean(predicted-soc_gt).item())+total_test_error
-            self.myUtils.writer("Average Error",total_test_error/sample_length,epoch)
-        print('Average error of the network for {} epochs is: {}'.format(epoch,total_test_error/sample_length))
+                predicted,_ = torch.max(outputs.data, 1)
+                merr = torch.mean(predicted-soc_gt)
+                total_test_error = abs(merr)+total_test_error
+                # print(merr,total_test_error, sample_length)
+            self.myUtils.writer.add_scalar("Average_Error",(total_test_error*100/sample_length),epoch)
+        print('Average error of the network for {} epochs is: {}'.format(epoch,total_test_error*100/sample_length))
 
 
 if __name__ == "__main__":
