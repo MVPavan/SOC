@@ -121,7 +121,7 @@ class SOCDataset():
 def GetSOCdata(batch_len = 1000,pkl = False):    
     if pkl:
         print("Calculating Average Current, Voltage and SOC .... ")
-        PickleDB()    
+        PickleDB() 
     with open(pkl_file, 'rb') as fp:
         soc_db_all = pickle.load(fp)
 
