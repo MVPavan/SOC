@@ -111,9 +111,9 @@ class SOCDataset():
     def _init_dataset(self):
         for key in self.soc_db.keys():
             subset = self.soc_db[key]
-            for i in range(len(subset["v"])):
+            for i,row in subset.iterrows():
                 self.samples.append((np.array(
-                    [subset["v"][i][0], subset["temp"][i][0], subset["av"][i][0], subset["ai"][i][0]]), subset["soc"][i][0]))
+                    [row["v"], row["temp"], row["av"], row["ai"]]), row["soc"]))
             print("Loading complete from dataset: {}".format(key))
 
 
@@ -121,19 +121,19 @@ def GetSOCdata(batch_len=1000, pkl=False):
     if pkl:
         print("Calculating Average Current, Voltage and SOC .... ")
         PickleDB()
-#     with open(pkl_file, 'rb') as fp:
-#         soc_db_all = pickle.load(fp)
+    with open(pkl_file, 'rb') as fp:
+        soc_db_all = pickle.load(fp)
 
-#     train_dataset = SOCDataset(soc_db_all["train"],batch_len)
-#     test_dataset = SOCDataset(soc_db_all["test"],batch_len)
+    train_dataset = SOCDataset(soc_db_all["train"],batch_len)
+    test_dataset = SOCDataset(soc_db_all["test"],batch_len)
 
-# #    print(len(dataset))
-# #    print(dataset[100])
-# #    print(dataset[122:361])
-#     return train_dataset,test_dataset
+#    print(len(dataset))
+#    print(dataset[100])
+#    print(dataset[122:361])
+    return train_dataset,test_dataset
 
 
-# trd, tsd = GetSOCdata(batch_len=1, pkl=True)
-GetSOCdata(batch_len=1, pkl=True)
+# trd, tsd = GetSOCdata(batch_len=1, pkl=False)
+# GetSOCdata(batch_len=1)
 # for i, (inputs, soc_gt) in enumerate(trd):
 #    print(i, (type(inputs),inputs, soc_gt))

@@ -18,7 +18,7 @@ pkl_file = './DATA/soc_db_v2.pkl'
 
 class SOCLoader():
     def __init__(self,):
-        self.data_folder = './DATA/'
+        self.data_folder = './DATA/Data_OLD/'
         self.pkl_file = pkl_file
         self.raw_files = {
                 'train' : {
@@ -133,6 +133,6 @@ def GetSOCdata(batch_len = 1000,pkl = False):
 #    print(dataset[122:361])
     return train_dataset,test_dataset
 
-#trd,tsd = GetSOCdata(batch_len = 1)
+trd,tsd = GetSOCdata(batch_len = 1, pkl=False)
 #for i, (inputs, soc_gt) in enumerate(trd):
 #    print(i, (type(inputs),inputs, soc_gt))

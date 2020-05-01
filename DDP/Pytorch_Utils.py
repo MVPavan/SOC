@@ -1,11 +1,13 @@
 import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
+from pathlib import Path
 
 class MyUtils():
-    def __init__(self,save_path_dir="./outputs"):
-        self.save_path_dir=save_path_dir
-        self.writer = SummaryWriter(os.path.join(save_path_dir,"logs"))
+    def __init__(self,save_path_dir):
+
+        self.save_path_dir=Path("./outputs",save_path_dir).as_posix()
+        self.writer = SummaryWriter(self.save_path_dir)
         # self.writer = SummaryWriter()
 
     def checkpoint_saver(self,model,optimizer,epoch,batch,loss,save_name=""):
