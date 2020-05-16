@@ -16,7 +16,7 @@ from pathlib import Path
 import os
 import re
 
-pkl_file = './DATA/soc_db_v3.pkl'
+pkl_file = './DATA/soc_db_v4.pkl'
 ###############################################################################
 
 ###############################################################################
@@ -117,7 +117,7 @@ class SOCDataset():
             print("Loading complete from dataset: {}".format(key))
 
 
-def GetSOCdata(batch_len=1000, pkl=False):
+def GetSOCdata(batch_len=1, pkl=False):
     if pkl:
         print("Calculating Average Current, Voltage and SOC .... ")
         PickleDB()

@@ -6,7 +6,7 @@ from pathlib import Path
 class MyUtils():
     def __init__(self,save_path_dir):
 
-        self.save_path_dir=Path("./outputs",save_path_dir).as_posix()
+        self.save_path_dir=Path("./outputs10",save_path_dir).as_posix()
         self.writer = SummaryWriter(self.save_path_dir)
         # self.writer = SummaryWriter()
 

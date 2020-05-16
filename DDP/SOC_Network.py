@@ -11,31 +11,41 @@ scale2 = 0
 scale1 = 0
 class SOC_Loss():
     def __init__(self,):
-        self.scale1 = 0
-        self.scale2 = 0
+        self.scale1 = scale1
+        self.scale2 = scale2
         self.scale3 = scale3
         self.mse_loss = nn.MSELoss()
 
     def criterion(self,soc_est,soc_gt):
-        # err = soc_est*100-soc_gt*100
+        # err = soc_est-soc_gt
         # err = torch.max(err)
-        # print(err)
-        # max_sqer = err**2
+        # # print(err)
+        # # max_sqer = err**2
         # max_abe = abs(err)
         # mae_err = nn.L1Loss()(soc_est,soc_gt)        
         mse_err = self.mse_loss(soc_est,soc_gt)
-        # closs = self.scale1*max_abe#.item()+self.scale2*mae_err.item()+self.scale3*mse_err.item()
+        # closs = self.scale1*max_abe+self.scale3*mse_err#+self.scale2*mae_err
         closs = self.scale3*mse_err
         # print(max_abe.item(),mae_err.item())
         # print(max_abe.item())#,max_sqer.item(),mse_err.item())
         return closs
  
 class NeuralNet(nn.Module):
-    def __init__(self, input_size, hidden_size, num_classes):
-        super(NeuralNet, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size) 
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, num_classes)
+    
+    #def __init__(self, input_size, hidden_size, num_classes):
+    #   super(NeuralNet, self).__init__()
+    #   self.fc1 = nn.Linear(input_size, hidden_size) 
+    #   self.relu = nn.ReLU()
+    #   self.fc2 = nn.Linear(hidden_size, num_classes)
+
+    def __init__(self, input_size, hidden_size_1,hidden_size_2, num_classes):
+       super(NeuralNet, self).__init__()
+       self.fc1 = nn.Linear(input_size, hidden_size_1) 
+       self.relu = nn.ReLU()
+       self.fci = nn.Linear(hidden_size_1, hidden_size_2)
+       self.relu = nn.ReLU()
+       self.fc2 = nn.Linear(hidden_size_2, num_classes)
+       
         
     def forward(self, x):
         out = self.fc1(x)
@@ -58,16 +68,21 @@ class ModelClass():
         self.ModelInit()
 
     def HyperParams(self,):# Hyper-parameters 
-        [self.input_size, self.hidden_size, self.num_classes] = [4, 8, 1]
-        self.num_epochs = 15
+        [self.input_size, self.hidden_size_1, self.hidden_size_2, self.num_classes] = [4,8,8,1]
+        #[self.input_size, self.hidden_size, self.num_classes] = [4, 8, 1]
+        self.num_epochs = 20
         self.batch_len = 1
         self.learning_rate = 0.0001
         self.train_batch_size = self.batch_len
-        self.test_batch_size = 1000
-        save_str = "Exp_{}{}{}_Epochs_{}_bl_{}_lr_{}_ls1_{}_ls2_{}_ls3_{}".format(
-            self.input_size, self.hidden_size, self.num_classes,
+        self.test_batch_size = 1
+        save_str = "Exp_{}{}{}{}_Epochs_{}_bl_{}_lr_{}_ls1_{}_ls2_{}_ls3_{}".format(
+            self.input_size, self.hidden_size_1, self.hidden_size_2, self.num_classes,
             self.num_epochs,self.batch_len,self.learning_rate,scale1, scale2, scale3
         )
+        #save_str = "Exp_{}{}{}_Epochs_{}_bl_{}_lr_{}_ls1_{}_ls2_{}_ls3_{}".format(
+        #    self.input_size, self.hidden_size, self.num_classes,
+        #    self.num_epochs,self.batch_len,self.learning_rate,scale1, scale2, scale3
+        #)
         self.myUtils = Pytorch_Utils.MyUtils(save_path_dir=save_str)
         
 
@@ -75,13 +90,14 @@ class ModelClass():
         train_dataset,test_dataset = soc_data.GetSOCdata(self.batch_len , pkl = False)
         self.train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
                                                 batch_size=self.train_batch_size, 
-                                                shuffle=False)
+                                                shuffle=True)
         self.test_loader = torch.utils.data.DataLoader(dataset=test_dataset, 
                                                 batch_size=self.test_batch_size, 
                                                 shuffle=False)
 
     def ModelInit(self,):
-        self.model = NeuralNet(self.input_size, self.hidden_size, self.num_classes).to(self.device)
+        self.model = NeuralNet(self.input_size, self.hidden_size_1, self.hidden_size_2, self.num_classes).to(self.device)
+        #self.model = NeuralNet(self.input_size, self.hidden_size, self.num_classes).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate, 
                                     betas=(0.9, 0.999), eps=1e-08, weight_decay=0.05, amsgrad=False)
         self.soc_loss = SOC_Loss()
@@ -92,8 +108,8 @@ class ModelClass():
         for epoch in range(self.num_epochs):
             batch_loss = 0
             batch_loss_update = 0
-            if epoch > 8:
-                [self.soc_loss.scale1,self.soc_loss.scale2,self.soc_loss.scale3] = [self.soc_loss.scale1,self.soc_loss.scale2,self.soc_loss.scale3]
+            # if epoch > 5:
+            #     [self.soc_loss.scale1,self.soc_loss.scale2,self.soc_loss.scale3] = [10*self.soc_loss.scale1,10*self.soc_loss.scale2,10*self.soc_loss.scale3]
 
             for i, (inputs, soc_gt) in enumerate(self.train_loader):
                 # if i>10000:
@@ -138,7 +154,7 @@ class ModelClass():
                 merr = torch.mean(predicted-soc_gt)
                 total_test_error = abs(merr)+total_test_error
                 # print(merr,total_test_error, sample_length)
-            self.myUtils.writer.add_scalar("Test Error",(total_test_error*100/sample_length),epoch)
+            self.myUtils.writer.add_scalar("SOC Error",(total_test_error*100/sample_length),epoch)
         print('Test error of the network for {} epochs is: {}'.format(epoch,total_test_error/sample_length))
 
 

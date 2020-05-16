@@ -1,4 +1,4 @@
-*.pth
-*.ckpt
-*.pkl
-*out*
+# *.pth
+# *.ckpt
+# *.pkl
+# *out*
